@@ -23,3 +23,34 @@
  */
 
 $string['pluginname'] = 'PHPUnit Test Generator';
+$string['unrecognisedparms'] = 'WARNING: Unrecognised parameters passed';
+$string['nopluginpath'] = 'Plugin path has not been specified';
+$string['nopluginsubpath'] = 'No plugin sub-directory has been specified';
+$string['plugindirmissing'] = 'Plugin directory not found';
+$string['noversionfile'] = 'Version file is missing - is this a plugin?';
+
+$string['helptext'] = '
+Generates PHPUnit Test skeleton files.
+
+Usage:
+  php {$a} [--plugin-path=path/to/plugin] [--purge] [--help]
+
+--plugin-path
+        is required unless --help is specified and must exist.
+--purge
+        overwrite existing test files - use with caution
+-h, --help          Print out this help
+
+Example from Moodle root directory:
+\$ php {$a} --plugin-path=local/housekeeping --purge
+
+';
+$string['testdirfail'] = 'Failed to create tests directory';
+$string['testpathisfile'] = '"{$a}" is not a directory';
+$string['mixedpurposefile'] = '"{$a}" is a mixed purpose file - skipping';
+$string['interfacefile'] = '"{$a}" is an interface file - skipping';
+$string['traitfile'] = '"{$a}" is a trait file - skipping';
+$string['nofunctions'] = '"{$a}" has not functions - skipping';
+$string['testfilenopurge'] = 'Test file exists for "{$a}", skipping';
+$string['failedtosave'] = 'Failed to save "{$a}"';
+$string['generationcomplete'] = 'Test Skeleton Generation complete.';

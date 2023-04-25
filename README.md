@@ -1,4 +1,4 @@
-# PHPUnit Test Generator #
+# Moodle PHPUnit Test Generator #
 ## moodle-local_phpunit_testgenerator ##
 
 Generate PHP Unit Test skeleton files from existing plugin code.

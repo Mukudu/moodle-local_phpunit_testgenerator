@@ -35,8 +35,6 @@ global $CFG;
 require_once($CFG->libdir . '/clilib.php');
 
 $testsdir = 'tests/';       // Trailing slash required.
-// $excludefiles = array('/settings.php', '/version.php');
-// $excludedirs = array('/tests', '/db', '/lang/en');
 
 $excludefiles = array();
 $excludedirs = array('/db');
@@ -59,60 +57,43 @@ list($options, $unrecognized) = cli_get_params(
 );
 
 if ($unrecognized) {
-    $message = 'Unrecognised parameters';
-    foreach ($unrecognized as $param => $value) {
-        $message .=  " $param,";
-    }
-    echo rtrim($message, ',');
+    echo get_string('unrecognisedparms', 'local_phpunit_testgenerator') . "\n";
+    // exit(0);
 }
-
-$help = "
-Generates PHPUnit Test skeleton files.
-
-Usage:
-  php generateskeletons.php [--plugin-path=path/to/plugin] [--help]
-
---plugin-path
-        is required and must exist.
---purge
-        overwrite existing files.
-
--h, --help          Print out this help
-
-Example from Moodle root directory:
-\$ php local/phpunit_testgenerator/cli/generateskeletons.php --plugin-path=local/housekeeping
-
-";
 
 // Check the plugin directory.
 $plugin = new \stdClass();
 $fullpluginpath = '';
-if (!empty($options['plugin-path'])) {
-    // Clear leading or trailing slashes
-    $options['plugin-path'] = trim($options['plugin-path'], '/');
-    $fullpluginpath = $CFG->dirroot . "/" . $options['plugin-path'] . "/";
-    if (!file_exists($fullpluginpath)) {
-        echo "\n**Directory not found\n";
+if (empty($options['plugin-path'])) {
+    echo "\n". get_string('nopluginpath', 'local_phpunit_testgenerator') . "\n";
+} else {
+    // Check for a sub directory e.g. local/myplugin.
+    $pos = strpos($options['plugin-path'], '/');
+    if ($pos === false) {       // Should not happen.
+        echo "\n" . get_string('nopluginsubpath', 'local_phpunit_testgenerator') . "\n";
         $options['plugin-path'] = false;
     } else {
-        $versionfile = $fullpluginpath . "version.php";
-        if (file_exists($versionfile)) {
-            require_once($versionfile);
-        } else {
-            echo "\n**Version file is missing - is this a plugin?\n";
+        // Clear leading or trailing slashes
+        $options['plugin-path'] = trim($options['plugin-path'], '/');
+        $fullpluginpath = $CFG->dirroot . "/" . $options['plugin-path'] . "/";
+        if (!file_exists($fullpluginpath)) {
+            echo "\n". get_string('plugindirmissing', 'local_phpunit_testgenerator') . "\n";
             $options['plugin-path'] = false;
+        } else {
+            $versionfile = $fullpluginpath . "version.php";
+            if (file_exists($versionfile)) {
+                require_once($versionfile);
+            } else {
+                echo "\n" . get_string('noversionfile', 'local_phpunit_testgenerator') . "\n";
+                $options['plugin-path'] = false;
+            }
         }
     }
 }
 
-// Check for a sub directory e.g. local/myplugin.
-$pos = strpos($options['plugin-path'], '/');
-if ($pos === false) {       // Should not happen.
-    echo "\n**No sub path has been specified\n";
-    $options['plugin-path'] = false;
-}
-
 if (!empty($options['help']) || empty($options['plugin-path'])) {
+    $thisfile = $argv[0];
+    $help = get_string('helptext', 'local_phpunit_testgenerator', $thisfile);
     echo $help;
     exit(0);
 }
@@ -124,10 +105,10 @@ $testnamespace = substr_replace($options['plugin-path'], '_', $pos, 1);
 $testpath = $fullpluginpath . $testsdir;
 if (!file_exists($testpath)) {
     if (!mkdir($testpath)) {
-        die('Failed to create tests directory');
+        die(get_string('testdirfail', 'local_phpunit_testgenerator'));
     }
 } else if (!is_dir($testpath)) {
-    die("'$testpath' is not a directory");
+    die(get_string('testpathisfile', 'local_phpunit_testgenerator'));
 }
 
 // Now let's get all possible testable php files.
@@ -138,9 +119,6 @@ foreach ($filedets as $files) {
         // Relative path name
         $relativefile = str_replace($fullpluginpath, '/', $file);
 
-        /*
-         * Check exclusions.
-         */
         // Is it in excluded directory?
         $relativedir = dirname($relativefile);
         if (!in_array($relativedir, $excludedirs)) {
@@ -150,28 +128,14 @@ foreach ($filedets as $files) {
         } else {
             continue;
         }
+
         // Is it in the excluded files list?
         if (in_array($relativefile, $excludefiles)) {
             continue;
         }
 
-        // TODO BEN remove. - cambridge_friends.php
-//         if (basename($relativefile) != 'confirm_form.php') {
-//             continue;
-//         }
-//         if (basename($relativefile) != 'cambridge_friends.php') {
-//             continue;
-//         }
-
         // This is why we require local/moodlecheck
         $parsefile = new local_phpunit_testgenerator_file($file);
-
-//         $tokens = $parsefile->get_tokens();
-//         die(print_r($tokens, true));
-
-
-        //         $tokens = $parsefile->get_tokens();
-        //         die(print_r($tokens, true));
 
         // Check if this is a UI facing script.
         if ($requires = $parsefile->get_requires()) {
@@ -186,21 +150,20 @@ foreach ($filedets as $files) {
         $classes = $artifacts[T_CLASS];
 
         if (! ((empty($classes) == empty($interfaces)) ? empty($classes) : empty($traits)) ) {
-            echo "Mixed purpose file found - skipping\n";
+            echo get_string('mixedpurposefile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
         // Check if we are dealing with an interface - No tests
         if (count($interfaces)) {
-            echo "Interface file - skipping\n";
+            echo get_string('interfacefile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
-
 
         // TODO maybe we can do somthing with this
         // Using getMockForTrait() method?
         if (count($traits)) {
-            echo "Trait file - skipping\n";
+            echo get_string('traitfile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
@@ -212,6 +175,7 @@ foreach ($filedets as $files) {
         $functions = $parsefile->get_functions();
         // If there are no funtions - then we have nothing to do.
         if (empty($functions)) {
+            echo get_string('nofunctions', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
@@ -230,7 +194,7 @@ foreach ($filedets as $files) {
             $classes[] = $noclass;
         }
 
-        // For check for existing file.
+        // Check for existing file.
         if (dirname($relativefile) != '/') {
             $pathbit = str_replace('/', '_', trim(dirname($relativefile), '/')) . '_';
         } else {
@@ -252,7 +216,7 @@ foreach ($filedets as $files) {
                 $testfilename = $fullpluginpath . $testsdir . $pathbit . basename($file, '.php') . '_test.php';
             }
             if (!$options['purge'] && file_exists($testfilename)) {
-                echo("Test file exists for '$relativefile', skipping generation\n");
+                echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
                 continue;
             }
 
@@ -401,13 +365,10 @@ foreach ($filedets as $files) {
             $filelines = preg_replace("|\t|", '    ', $filelines);
 
             if (file_put_contents($testfilename, $filelines) === false) {
-                echo "Failed to save '$testfilename'\n";
+                echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
             }
         }
     }
 }
 
-echo "\nTest Skeleton Generation complete\n";
-
-
-
+echo "\n" . get_string('generationcomplete', 'local_phpunit_testgenerator') . "\n";

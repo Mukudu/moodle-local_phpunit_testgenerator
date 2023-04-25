@@ -1,0 +1,5 @@
+{
+    "plugintypes": {
+        "plugins": "local\/phpunit_testgenerator\/plugins"
+    }
+}

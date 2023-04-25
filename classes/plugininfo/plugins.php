@@ -14,18 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_phpunit_testgenerator\plugininfo;
+
 /**
- * Version file.
+ * The subplugin class file for Moodle > 3.5
  *
  * @package   local_phpunit_testgenerator
  * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+class plugins extends \core\plugininfo\base {
 
-defined('MOODLE_INTERNAL') || die();
-$plugin->version   = 2023042501;
-$plugin->requires  = 2020061500;    // Requires M3.9.0.
-$plugin->component = 'local_phpunit_testgenerator';
-$plugin->dependencies = array(
-    'local_moodlecheck'  => 2021051200
-);
+}
+
