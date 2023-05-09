@@ -30,15 +30,17 @@ if (isset($_SERVER['REMOTE_ADDR'])) {
 
 require(__DIR__ . '/../../../config.php');
 require_once(__DIR__ . '/../classes/local_phpunit_testgenerator_file.php');
+require_once(__DIR__ . '/../classes/plugins.class.php');
+require_once(__DIR__ . '/../classes/phputestgeneratorbase.php');
 require_once(__DIR__ .'/../locallib.php');
 global $CFG;
 require_once($CFG->libdir . '/clilib.php');
 
 $testsdir = 'tests/';       // Trailing slash required.
 
+// TODO Turn this into settings.  Maybe???
 $excludefiles = array();
 $excludedirs = array('/db');
-
 // Add the tests folder to the directory exclusions.
 $excludedirs[] = '/' . trim($testsdir, '/');
 
@@ -98,9 +100,6 @@ if (!empty($options['help']) || empty($options['plugin-path'])) {
     exit(0);
 }
 
-// Namespace for plugin.
-$testnamespace = substr_replace($options['plugin-path'], '_', $pos, 1);
-
 // Ensure we have a tests directory to write the test files to.
 $testpath = $fullpluginpath . $testsdir;
 if (!file_exists($testpath)) {
@@ -111,11 +110,36 @@ if (!file_exists($testpath)) {
     die(get_string('testpathisfile', 'local_phpunit_testgenerator'));
 }
 
+// If we got this far - we will be needing our sub-plugins.
+$extensions = load_subplugins();
+
+// foreach ($extentions as $extention => $object) {
+//     echo $object->get_name() . "\n";
+// }
+// die("Early exist - Done\n");
+
+// Namespace for plugin.
+$testnamespace = substr_replace($options['plugin-path'], '_', $pos, 1);
+
+// Temp - deal with some files only.
+$filenames = array(
+    '/var/www/html/enrol/invitation/classes/task/cleanup.php',
+    '/var/www/html/enrol/invitation/classes/event/invitation_sent.php',
+    '/var/www/html/enrol/invitation/locallib.php',
+    '/var/www/html/enrol/invitation/edit_form.php',
+);
+
 // Now let's get all possible testable php files.
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($fullpluginpath));
 $filedets = new RegexIterator($iterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 foreach ($filedets as $files) {
     foreach ($files as $file) {
+        if (!in_array($file, $filenames)) {
+            continue;
+        }
+        // echo "$file\n";
+        // End temp.
+
         // Relative path name
         $relativefile = str_replace($fullpluginpath, '/', $file);
 
@@ -134,10 +158,22 @@ foreach ($filedets as $files) {
             continue;
         }
 
-        // This is why we require local/moodlecheck
+        // Update test path.
+        if (dirname($relativefile) != '/') {
+            $testpath = $testpath . str_replace('/', '_', trim(dirname($relativefile), '/')) . '_';
+        }
+
+        // This is why we require local/moodlecheck - parse our file.
         $parsefile = new local_phpunit_testgenerator_file($file);
 
-        // Check if this is a UI facing script.
+        $functions = $parsefile->get_functions();
+        // If there are no functions - then we have nothing to do - most UI facing scripts will have no functions.
+        if (empty($functions)) {
+            echo get_string('nofunctions', 'local_phpunit_testgenerator', $relativefile) . "\n";
+            continue;
+        }
+
+        // Check if this is a Moodle UI facing script.
         if ($requires = $parsefile->get_requires()) {
             if (is_ui_facing($requires, str_replace($CFG->dirroot, '', $file))) {
                 continue;
@@ -149,222 +185,128 @@ foreach ($filedets as $files) {
         $traits = $artifacts[T_TRAIT];
         $classes = $artifacts[T_CLASS];
 
+        // Check for mixed purposes files - we cannot deal with them yet.
         if (! ((empty($classes) == empty($interfaces)) ? empty($classes) : empty($traits)) ) {
             echo get_string('mixedpurposefile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
-        // Check if we are dealing with an interface - No tests
+        // Check if we are dealing with interface/s - No tests.
         if (count($interfaces)) {
             echo get_string('interfacefile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
-        // TODO maybe we can do somthing with this
+        // TODO maybe we can do something with this.
         // Using getMockForTrait() method?
         if (count($traits)) {
             echo get_string('traitfile', 'local_phpunit_testgenerator', $relativefile) . "\n";
             continue;
         }
 
-        $extendedclasses = null;
-        if (count($classes)) {
-            $extendedclasses = $parsefile->get_extendedclasses();
-        }
-
-        $functions = $parsefile->get_functions();
-        // If there are no funtions - then we have nothing to do.
-        if (empty($functions)) {
-            echo get_string('nofunctions', 'local_phpunit_testgenerator', $relativefile) . "\n";
-            continue;
-        }
-
-        $classfunctions = array();
-        $noclassname = 'noclassfunctions';
+        $classmethods = array();
+        $noclassfunctions = array();
         foreach ($functions as $function) {
             if ($function->class) {
-                $classfunctions[$function->class->name][] = $function;
+                $classmethods[$function->class->name][] = $function;
             } else {
-                $classfunctions[$noclassname][] = $function;
+                $noclassfunctions[] = $function;
             }
         }
-        if (!empty($classfunctions[$noclassname])) {
-            $noclass = new \stdClass();
-            $noclass->name = $noclassname;
-            $classes[] = $noclass;
+
+        if (count($classes)) {
+            foreach ($classes as &$class) {     // Each valid class gets its own test file.
+                $filelines = array();
+                // Has the class got any functions?
+                if (empty($classmethods[$class->name])) {
+                    continue;
+                }
+
+                // Class test file name.
+                $testfilename = $testpath . $class->name . '_test.php';
+
+                // TODO for default file.
+                if (!$options['purge'] && file_exists($testfilename)) {
+                    echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
+                    continue;
+                }
+
+                // Namespaced class name.
+                if ($class->namespace = $parsefile->get_namespace()) {
+                    $class->fullname = '\\' . $class->namespace->name . '\\' . $class->name;
+                } else {
+                    $class->fullname = '\\' . $class->name;
+                }
+
+                // Check if we are dealing with a moodle_form - no tests for that.
+                if (is_moodleform($file, $class->fullname)) {
+                    echo "Moodle form\n";
+                    continue;
+                }
+
+                // Find a sub-plugin handler if there is one.
+                $handler = new phputestgeneratorbase();        // default handler;
+                foreach ($extensions as $extension) {
+                    if ($extension->is_handler($file, $class->fullname)) {
+                        $handler = $extension;
+                        break;
+                    }
+                }
+                echo ("Handler is " . $handler->get_name() . " for '$file' in '$testfilename'\n");
+
+                $filelines[] = get_filetop($testnamespace, $relativefile, $testfilename);
+
+                // Use the handler to create the test lines.
+                foreach ($classmethods[$class->name] as $method) {
+                    if ($methodlines = $handler->generate_functiontestlines($method)) {
+                        $filelines = array_merge($filelines, $methodlines);
+                    }
+                }
+
+                $filelines[] = get_file_end();
+
+                //Replace tabs with spaces to meet Moodle Development Guidelines.
+                 $filelines = preg_replace("|\t|", '    ', $filelines);
+
+                if (file_put_contents($testfilename, implode('', $filelines)) === false) {
+                    echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
+                }
+
+                //         if ($iseventclass) {
+                //             $filelines .= get_trigger_testlines($classname);
+                //         }
+            }
         }
 
-        // Check for existing file.
-        if (dirname($relativefile) != '/') {
-            $pathbit = str_replace('/', '_', trim(dirname($relativefile), '/')) . '_';
-        } else {
-            $pathbit = '';
-        }
+        // Non class functions.
+        if (count($noclassfunctions)) {
 
-        foreach ($classes as $class) {
+            $filelines = array();
+            // Default test file name.
+            $testfilename = $testpath . basename($file, '.php') . '_test.php';
 
-            // Has the class got any functions?
-            if (empty($classfunctions[$class->name])) {
-                continue;
-            }
-
-            // Check file existence.
-            if ((count($classes) > 1) && ($class->name != $noclassname)) {
-                $testfilename = $fullpluginpath . $testsdir . $pathbit . $class->name . '_test.php';
-            } else {
-                // Default file name.
-                $testfilename = $fullpluginpath . $testsdir . $pathbit . basename($file, '.php') . '_test.php';
-            }
+            // TODO for default file.
             if (!$options['purge'] && file_exists($testfilename)) {
                 echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
                 continue;
             }
+            echo ("Handler is " . $handler->get_name() . " for '$file' in '$testfilename'\n");
 
-            $filelines = get_filetop($testnamespace, ltrim($relativefile, '/'), $testfilename);
+            $filelines[] = get_filetop($testnamespace, $relativefile, $testfilename);
 
-            $iseventclass = false;
-            $namespace = null;
-            $classname = '';
-            $classlines = array();
-            $classvarname = '';
-            $iseventclass = false;
-
-            if (($class->name != $noclassname)) {
-
-                if ($namespace = $parsefile->get_namespace()) {
-                    $classname = '\\' . $namespace->name . '\\' . $class->name;
-                } else {
-                    $classname = '\\' . $class->name;
-                }
-
-                $classvarname = strtolower(preg_replace('/[\W_]/', '', $class->name));
-
-                if (!empty($extendedclasses[$class->name])) {
-                    // We do not test moodleforms.
-                    if (is_moodleform_class($extendedclasses[$class->name])) {
-                        continue;
-                    }
-
-                    // Check if we are an events class
-                    $iseventclass = is_event_class($file, $extendedclasses[$class->name], $namespace);
-                }
-
-                // Let's see if there is a constructor method
-                if (!$iseventclass) {
-                    foreach ($functions as $function) {
-                        if ($function->name == '__construct') {
-                            $argsnippet = '';
-                            if (count($function->arguments)) {
-                                foreach ($function->arguments as $arg) {
-                                    if ($argmt = $arg[1]) {
-                                        $classlines[] = "\t\t$argmt = null;\t// Provide a value here.";
-                                        if ($argsnippet) {
-                                            $argsnippet .= ', ';
-                                        }
-                                        $argsnippet .= $argmt;
-                                    }
-                                }
-                            }
-                            $classlines[] = "\t\t" . '$' . $classvarname . " = new $classname($argsnippet);";
-                        }
-                    }
-                } else {            // Constructor for events is different.
-                    // $event = \local_course_history\event\snapshot_backedup::create($eventdata);
-                    $classlines[] = "\t\t" . '/* Here ensure to define the event properties that are required */';
-                    $classlines[] = "\t\t" . '$eventdata = array(';
-                    $classlines[] = "\t\t\t" . '"other" => array("message" => "This is just a test")';
-                    $classlines[] = "\t\t" . ');';
-                    $classlines[] = "\t\t" . '$' . "$classvarname = $classname::create(\$eventdata);";
-                }
-                if (empty($classlines)) {
-                    $classlines[] = "\t\t" . '$' . $classvarname . " = new $classname(); // This may cause errors as we do not know the arguments we need.";
+            $handler = new phputestgeneratorbase();        // default handler;
+            foreach ($noclassfunctions as $function) {
+                if ($methodlines = $handler->generate_functiontestlines($function)) {
+                    $filelines = array_merge($filelines, $methodlines);
                 }
             }
 
-            foreach ($classfunctions[$class->name] as $function) {
-                // Ignore magic functions
-                if (preg_match('/^__/', $function->name)) {
-                    // echo "Ignoring " . $function->name . "\n";
-                    continue;
-                }
-                // Ignore private, protected functions
-                $ispublic = false;
-                $isstatic = false;
-                if (empty($function->accessmodifiers)) {
-                    $ispublic = true;
-                } else {
-                    foreach($function->accessmodifiers as $accessmodifier) {
-                        switch ($accessmodifier) {
-                            case T_PUBLIC :
-                                $ispublic = true;
-                                break;
-                            case T_STATIC :
-                                $isstatic = true;
-                                break;
-                        }
-                    }
-                }
-
-                if (!$ispublic) {
-                    continue;
-                }
-
-                // PHP Doc for test function.
-                $methodlines = "\t/**\n\t * Testing {$function->name}()\n \t*/\n";
-
-                // Function lines.
-                $testmethodname = 'test_' . $function->name;
-                $methodlines .= "\tpublic function $testmethodname() {\n";
-
-                $methodlines .=  get_pending_lines();
-                $variablename = '$' . strtolower(preg_replace('/[\W_]/', '', $function->name));
-
-                if (!$isstatic && count($classlines)) {    // Class methods tests.
-                    $methodlines .= implode("\n", $classlines) . "\n\n";
-                }
-
-                $argsnippet = '';
-                foreach ($function->arguments as $arg) {
-                    if ($argmt = $arg[1]) {
-                        $methodlines .= "\t\t$argmt = null;\t// Provide a value here.\n";
-                        if ($argsnippet) {
-                            $argsnippet .= ', ';
-                        }
-                        $argsnippet .= $argmt;
-                    }
-                }
-
-                if ($classname && !$isstatic) {
-                    $methodlines .= "\t\t" . $variablename . ' = $' . $classvarname . '->' . $function->name . "($argsnippet);\n";
-                } else if ($classname && $isstatic) {
-                    if ($namespace) {
-                        $staticfuncall = '\\' . $namespace->name . '\\' . $function->fullname;
-                    } else {
-                        $staticfuncall = '\\' . $function->fullname;
-                    }
-                    $methodlines .= "\t\t$variablename = $staticfuncall($argsnippet);\n";
-                } else {
-                    $methodlines .= "\t\t$variablename = " . $function->name . "($argsnippet);\n";
-                }
-
-                // Add in a final assertion.
-                $methodlines .= "\t\t" . '$this->assertNotEmpty(' . $variablename . ", 'Provide a better assertion here!');\n";
-
-                $methodlines .= "\t}\n\n";
-
-                $filelines .= $methodlines;
-
-            }
-            if ($iseventclass) {
-                $filelines .= get_trigger_testlines($classname);
-            }
-
-            $filelines .= get_file_end();
+            $filelines[] = get_file_end();
 
             // Replace tabs with spaces to meet Moodle Development Guidelines.
             $filelines = preg_replace("|\t|", '    ', $filelines);
 
-            if (file_put_contents($testfilename, $filelines) === false) {
+            if (file_put_contents($testfilename, implode('', $filelines)) === false) {
                 echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
             }
         }

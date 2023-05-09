@@ -22,10 +22,12 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-function get_filetop($namespace, $relativefilepath, $testfilename) {
+function get_filetop($namespace, $relativefile, $testfilename) {
 
     $thisyear = date('Y');
     $classname = basename($testfilename, '.php');
+    $relativefilepath = ltrim($relativefile, '/');
+
     return
 "<?php
 // This file is part of Moodle - https://moodle.org/
@@ -66,22 +68,19 @@ function get_file_end() {
     return "}\n\n";
 }
 
-function get_pending_lines() {
-    return "
-        \$this->resetAfterTest(false);
-        // Mark this test as incomplete.
-        \$this->markTestIncomplete('This test needs to be completed');
-
-";
-}
-
-function is_moodleform_class($extendedclass) {
-    // This function will not find classes extending classes that extend moodleform or mod_moodleform.
-    //foreach ($extendedclasses as $extendedclass) {
-        if (stripos($extendedclass->name, 'moodleform') !== false) {
+function is_moodleform($filepath, $fullclassname) {
+    global $CFG;    // Needed by the included files.
+    // Load the class file if required.
+    if (!class_exists($fullclassname)) {
+        require_once($filepath);
+    }
+    $class = new ReflectionClass($fullclassname);
+    while ($parent = $class->getParentClass()) {
+        if ($parent->getName() == 'moodleform') {
             return true;
         }
-    //}
+        $class = $parent;
+    }
     return false;
 }
 
@@ -102,61 +101,20 @@ function is_ui_facing($requires, $pluginfilepath) {
     return false;
 }
 
-function get_trigger_testlines($classname) {
-
-    return
-'
-    /**
-     * Test the triggering of the event.
-     */
-    public function test_trigger() {
-        $this->resetAfterTest(false);
-
-        // Mark this test as incomplete.
-        $this->markTestIncomplete("This test needs to be completed");
-
-        $sink = $this->redirectEvents();
-
-        /* Here ensure to define the event properties that are required */
-        $eventdata = array(
-            "other" => array("message" => "This is just a test")
-        );
-
-        $event = ' . $classname . '::create($eventdata);
-        $event->trigger();
-
-        $events = $sink->get_events();
-        $this->assertGreaterThan(0, count($events));
-
-        foreach ($events as $event) {
-            if ($event instanceof ' . $classname . ') {
-                break;  // The variable $event will be the correct event.
-            }
+function load_subplugins() {
+    // Load each of the sub-plugins.
+    $allplugins = array();
+    $subplugins = \core_component::get_plugin_list('phputestgenerator');
+    foreach ($subplugins as $sptype => $sppath) {
+        $classname = "\phputestgenerator_$sptype\\$sptype";
+        if (!class_exists($classname)) {
+            $classfile = "$sppath/classes/$sptype.php";
+            require_once($classfile);
         }
-        // This will fail if the event is not found.
-        $this->assertInstanceOf(' . "'" . $classname . "'" . ', $event);
+        // This works as we do need to pass parameters to the constructor.
+        $allplugins[$sptype] = new $classname;
     }
-
-';
-
+    return $allplugins;
 }
 
-function is_event_class($filepath, $extendedclass = null, $namespace = null) {
 
-    if ($extendedclass) {
-        // Quickest way to find it
-        //foreach ($extendedclasses as $extendedclass) {
-            if ($extendedclass->name == '\core\event\base'){
-                return true;
-            }
-        //}
-    }
-    // In case we are extending a class that extends \core\event\base.
-    if (is_object($namespace)) {        // Events always are in namespaces.
-        if (strpos($namespace->name, '/event') !== false && strpos($filepath, 'classes/event') !== false) {
-            return true;
-        }
-    }
-
-    return false;
-}

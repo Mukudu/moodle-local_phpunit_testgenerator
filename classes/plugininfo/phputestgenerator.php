@@ -14,17 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace local_phpunit_testgenerator\plugins;
-
-defined('MOODLE_INTERNAL') || die();
+namespace local_phpunit_testgenerator\plugininfo;
 
 /**
- * Events subplugin
+ * The subplugin class file for Moodle > 3.5
  *
  * @package   local_phpunit_testgenerator
  * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class events extends \local_phpunit_testgenerator\phputestgeneratorplugin {
+class phputestgenerator extends \core\plugininfo\base {
 
 }
