@@ -23,7 +23,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-$plugin->version   = 2023042501;
+$plugin->version   = 2023051100;
 $plugin->requires  = 2020061500;    // Requires M3.9.0.
 $plugin->component = 'local_phpunit_testgenerator';
 $plugin->dependencies = array(

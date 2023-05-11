@@ -24,10 +24,6 @@
 
 define('CLI_SCRIPT', true);
 
-if (isset($_SERVER['REMOTE_ADDR'])) {
-    die; // no access from web!
-}
-
 require(__DIR__ . '/../../../config.php');
 require_once(__DIR__ . '/../classes/local_phpunit_testgenerator_file.php');
 require_once(__DIR__ . '/../classes/plugins.class.php');
@@ -113,14 +109,6 @@ if (!file_exists($testpath)) {
 // If we got this far - we will be needing our sub-plugins.
 $extensions = load_subplugins();
 
-// foreach ($extentions as $extention => $object) {
-//     echo $object->get_name() . "\n";
-// }
-// die("Early exist - Done\n");
-
-// Namespace for plugin.
-$testnamespace = substr_replace($options['plugin-path'], '_', $pos, 1);
-
 // Temp - deal with some files only.
 $filenames = array(
     '/var/www/html/enrol/invitation/classes/task/cleanup.php',
@@ -137,8 +125,6 @@ foreach ($filedets as $files) {
         if (!in_array($file, $filenames)) {
             continue;
         }
-        // echo "$file\n";
-        // End temp.
 
         // Relative path name
         $relativefile = str_replace($fullpluginpath, '/', $file);
@@ -225,7 +211,6 @@ foreach ($filedets as $files) {
                 // Class test file name.
                 $testfilename = $testpath . $class->name . '_test.php';
 
-                // TODO for default file.
                 if (!$options['purge'] && file_exists($testfilename)) {
                     echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
                     continue;
@@ -240,7 +225,6 @@ foreach ($filedets as $files) {
 
                 // Check if we are dealing with a moodle_form - no tests for that.
                 if (is_moodleform($file, $class->fullname)) {
-                    echo "Moodle form\n";
                     continue;
                 }
 
@@ -252,61 +236,36 @@ foreach ($filedets as $files) {
                         break;
                     }
                 }
-                echo ("Handler is " . $handler->get_name() . " for '$file' in '$testfilename'\n");
 
-                $filelines[] = get_filetop($testnamespace, $relativefile, $testfilename);
+                // Store the relevant methods with the class.
+                $class->functions = $classmethods[$class->name];
 
-                // Use the handler to create the test lines.
-                foreach ($classmethods[$class->name] as $method) {
-                    if ($methodlines = $handler->generate_functiontestlines($method)) {
-                        $filelines = array_merge($filelines, $methodlines);
-                    }
-                }
+                $filelines[] = $handler->generate($options['plugin-path'], $relativefile, $class);
 
-                $filelines[] = get_file_end();
-
-                //Replace tabs with spaces to meet Moodle Development Guidelines.
-                 $filelines = preg_replace("|\t|", '    ', $filelines);
-
-                if (file_put_contents($testfilename, implode('', $filelines)) === false) {
+                if (file_put_contents($testfilename, $filelines) === false) {
                     echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
                 }
-
-                //         if ($iseventclass) {
-                //             $filelines .= get_trigger_testlines($classname);
-                //         }
             }
         }
 
-        // Non class functions.
+        // Non-class functions.
         if (count($noclassfunctions)) {
 
             $filelines = array();
             // Default test file name.
             $testfilename = $testpath . basename($file, '.php') . '_test.php';
 
-            // TODO for default file.
             if (!$options['purge'] && file_exists($testfilename)) {
                 echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
                 continue;
             }
-            echo ("Handler is " . $handler->get_name() . " for '$file' in '$testfilename'\n");
-
-            $filelines[] = get_filetop($testnamespace, $relativefile, $testfilename);
 
             $handler = new phputestgeneratorbase();        // default handler;
-            foreach ($noclassfunctions as $function) {
-                if ($methodlines = $handler->generate_functiontestlines($function)) {
-                    $filelines = array_merge($filelines, $methodlines);
-                }
-            }
+            $noclass = new \stdClass();
+            $noclass->functions = $noclassfunctions;
+            $filelines[] = $handler->generate($options['plugin-path'], $relativefile, $noclass);
 
-            $filelines[] = get_file_end();
-
-            // Replace tabs with spaces to meet Moodle Development Guidelines.
-            $filelines = preg_replace("|\t|", '    ', $filelines);
-
-            if (file_put_contents($testfilename, implode('', $filelines)) === false) {
+            if (file_put_contents($testfilename, $filelines) === false) {
                 echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
             }
         }

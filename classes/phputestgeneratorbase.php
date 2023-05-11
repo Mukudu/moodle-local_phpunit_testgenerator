@@ -35,5 +35,4 @@ class phputestgeneratorbase extends \local_phpunit_testgenerator\phputestgenerat
         return 'phputestgeneratorbase';
     }
 
-
 }

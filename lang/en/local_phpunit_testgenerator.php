@@ -22,7 +22,10 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['pluginname'] = 'PHPUnit Test Generator';
+$string['pluginname'] = 'PHPUnit Tests Generator';
+$string['plugindescription'] = 'This development plugin generates skeleton PHPUnit test files.';
+$string['pluginrestriction'] = 'This plugin has to be run on the commandline as it generates files.';
+
 $string['unrecognisedparms'] = 'WARNING: Unrecognised parameters passed';
 $string['nopluginpath'] = 'Plugin path has not been specified';
 $string['nopluginsubpath'] = 'No plugin sub-directory has been specified';
@@ -54,3 +57,10 @@ $string['nofunctions'] = '"{$a}" has not got any functions - skipping';
 $string['testfilenopurge'] = 'Test file exists for "{$a}", skipping';
 $string['failedtosave'] = 'Failed to save "{$a}"';
 $string['generationcomplete'] = 'Test Skeleton Generation complete.';
+
+$string['testneedscompleting'] = 'This test needs to be completed';
+$string['provideassertionmsg'] = 'Provide a better assertion here!';
+$string['providevaluemsg'] = 'Provide a value here.';
+$string['errorwarningmsg'] = 'This may cause errors as we do not know the arguments we need.';
+$string['marktestincomplete'] = 'Mark this test as incomplete.';
+

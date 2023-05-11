@@ -15,31 +15,35 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Index file.
+ * Settings menu.
  *
  * @package   local_phpunit_testgenerator
  * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require('../../config.php');
+defined('MOODLE_INTERNAL') || die();
 
-global $PAGE, $SITE, $OUTPUT;  // For the IDE.
+global $ADMIN;  // For the IDE.
+if ($hassiteconfig) {
 
-$PAGE->set_context(context_system::instance());
-$PAGE->set_pagelayout('admin');
-$pluginname = get_string('pluginname', 'local_phpunit_testgenerator');
-$version = get_config('local_phpunit_testgenerator', 'version');
-$PAGE->set_heading($SITE->fullname . " : " . $pluginname);
-$PAGE->set_title($pluginname);
-$PAGE->set_url('/local/phpunit_testgenerator/index.php');
+    // Want my link to appear after the PHPUnit test link.
+    $devtree = $ADMIN->locate('development');
 
-echo $OUTPUT->header();
-echo $OUTPUT->heading("$pluginname - Version: $version");
+    $insertbefore = '';
+    $getnext = false;
+    foreach ($devtree->children as $child) {
+        if ($getnext) {
+            $insertbefore = $child->name;
+            break;
+        }
+        if ($child->name == 'toolphpunit') {
+            $getnext = true;
+        }
+    }
+    $mynode = new \admin_externalpage('local_phpunit_testgenerator',
+            get_string('pluginname', 'local_phpunit_testgenerator'),
+            new moodle_url('/local/phpunit_testgenerator/index.php'));
 
-$message = \html_writer::div(html_writer::tag('p', get_string('plugindescription', 'local_phpunit_testgenerator')));
-$message .= \html_writer::div(html_writer::tag('p', get_string('pluginrestriction', 'local_phpunit_testgenerator')));
-
-echo $OUTPUT->box($message);
-
-echo $OUTPUT->footer();
+    $ADMIN->add('development', $mynode, $insertbefore);
+}
