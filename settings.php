@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 global $ADMIN;  // For the IDE.
 if ($hassiteconfig) {
 
-    // Want my link to appear after the PHPUnit test link.
+    // Want the link to appear after the PHPUnit test link.
     $devtree = $ADMIN->locate('development');
 
     $insertbefore = '';
@@ -41,8 +41,7 @@ if ($hassiteconfig) {
             $getnext = true;
         }
     }
-    $mynode = new \admin_externalpage('local_phpunit_testgenerator',
-            get_string('pluginname', 'local_phpunit_testgenerator'),
+    $mynode = new \admin_externalpage('local_phpunit_testgenerator', get_string('pluginname', 'local_phpunit_testgenerator'),
             new moodle_url('/local/phpunit_testgenerator/index.php'));
 
     $ADMIN->add('development', $mynode, $insertbefore);

@@ -23,8 +23,8 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-$plugin->version   = 2023042501;
-$plugin->requires  = 2021051700;    // Requires M3.11
+
+$plugin->version   = 2023051200;
+$plugin->requires  = 2021051700;    // Requires M3.11.
 $plugin->component = 'phputestgenerator_task';
-$plugin->dependencies = array(
-);
+$plugin->dependencies = array();

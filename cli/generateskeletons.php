@@ -39,7 +39,7 @@ $excludedirs = array('/db');
 // Add the tests folder to the directory exclusions.
 $excludedirs[] = '/' . trim($testsdir, '/');
 
-// Test Moodle logo
+// Test Moodle logo.
 cli_logo();
 
 list($options, $unrecognized) = cli_get_params(
@@ -69,7 +69,7 @@ if (empty($options['plugin-path'])) {
         echo "\n" . get_string('nopluginsubpath', 'local_phpunit_testgenerator') . "\n";
         $options['plugin-path'] = false;
     } else {
-        // Clear leading or trailing slashes
+        // Clear leading or trailing slashes.
         $options['plugin-path'] = trim($options['plugin-path'], '/');
         $fullpluginpath = $CFG->dirroot . "/" . $options['plugin-path'] . "/";
         if (!file_exists($fullpluginpath)) {
@@ -107,30 +107,19 @@ if (!file_exists($testpath)) {
 // If we got this far - we will be needing our sub-plugins.
 $extensions = load_subplugins();
 
-// Temp - deal with some files only.
-/* $filenames = array(
-    '/var/www/html/enrol/invitation/classes/task/cleanup.php',
-    '/var/www/html/enrol/invitation/classes/event/invitation_sent.php',
-    '/var/www/html/enrol/invitation/locallib.php',
-    '/var/www/html/enrol/invitation/edit_form.php',
-); */
-
 // Now let's get all possible testable php files.
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($fullpluginpath));
 $filedets = new RegexIterator($iterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 foreach ($filedets as $files) {
     foreach ($files as $file) {
-//         if (!in_array($file, $filenames)) {
-//             continue;
-//         }
 
-        // Relative path name
+        // Relative path name.
         $relativefile = str_replace($fullpluginpath, '/', $file);
 
         // Is it in excluded directory?
         $relativedir = dirname($relativefile);
         if (!in_array($relativedir, $excludedirs)) {
-            while(dirname($relativedir) != '/') {
+            while (dirname($relativedir) != '/') {
                 $relativedir = dirname($relativedir);
             }
         } else {

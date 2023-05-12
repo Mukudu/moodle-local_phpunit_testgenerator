@@ -29,23 +29,43 @@ require_once(__DIR__ . '/../../../classes/plugins.class.php');
  */
 class event extends \local_phpunit_testgenerator\phputestgeneratorplugin {
 
+    /** @var $class - the class we handle */
     private $class = '\core\event\base';
 
-    private $amhandler = false;
-
+    /** @var $constructorlines - lines used to construct the object in each test. */
     protected $constructorlines = array();
 
-    public function get_name() {
+    /**
+     * Return the name of the subplugin
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::get_name()
+     */
+    public function get_name() : string {
         return get_string('pluginname', 'phputestgenerator_event');
     }
 
-    public function is_handler($filepath, $fullclassname) {
-        return $this->amhandler = $this->is_instance_of($this->class, $filepath, $fullclassname);
+    /**
+     * Returns true if the sub plugin is the class' handler.
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::is_handler()
+     * @param string $filepath
+     * @param string $fullclassname
+     * @return bool
+     */
+    public function is_handler(string $filepath, string $fullclassname) : bool {
+        return $this->is_instance_of($this->class, $filepath, $fullclassname);
     }
 
-    // Constructor for events is different.
-    protected function make_constructorlines($class = null) {
-         if (!count($this->constructorlines)) {
+    /**
+     * Generates the lines that create the class object for each test.
+     *
+     * Constructor for events is different.
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::make_constructorlines()
+     * @param \stdClass $class
+     */
+    protected function make_constructorlines(\stdClass $class = null) : void {
+        if (!count($this->constructorlines)) {
             $this->make_class_varname($class->name);
             $this->constructorlines[] = "\t\t" . '/* Here ensure to define the event properties that are required */' . "\n";
             $this->constructorlines[] = "\t\t" . '$eventdata = array(' . "\n";
@@ -55,11 +75,26 @@ class event extends \local_phpunit_testgenerator\phputestgeneratorplugin {
         }
     }
 
-    public function generate_postfunctions_tests($pluginpath, $relativefile, $class) {
+    /**
+     * Generate lines post (after) the main test lines.
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::generate_postfunctions_tests()
+     * @param string $pluginpath
+     * @param string $relativefile
+     * @param \stdClass $class
+     * @return array
+     */
+    public function generate_postfunctions_tests(string $pluginpath, string $relativefile, \stdClass $class) {
         return array($this->get_trigger_testlines($class->name));
     }
 
-    private function get_trigger_testlines($classname){
+    /**
+     * Additional test function to test if event can be triggered.
+     *
+     * @param string $classname
+     * @return string
+     */
+    private function get_trigger_testlines(string $classname) : string {
         return
         '
     /**
@@ -94,7 +129,5 @@ class event extends \local_phpunit_testgenerator\phputestgeneratorplugin {
     }
 
 ';
-
     }
-
 }

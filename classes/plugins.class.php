@@ -16,10 +16,8 @@
 
 namespace local_phpunit_testgenerator;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
- * Subplugin base class
+ * Sub-plugin class.
  *
  * @package   local_phpunit_testgenerator
  * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
@@ -27,19 +25,40 @@ defined('MOODLE_INTERNAL') || die();
  */
 abstract class phputestgeneratorplugin {
 
+    /** @var $constructorlines - lines used to construct the object in each test. */
     protected $constructorlines = array();
 
+    /** @var $classvarname - the variable name for the class object. */
     protected $classvarname = '';
 
+    /** @var $pendinglines - flag to determine if a markTestIncomplete test be incorporated into tests. */
     protected $pendinglines = true; // Default.
 
+    /** @var $dbreset - flag to specify if the DB should be reset after tests - used in the resetAfterTest() method. */
     protected $dbreset = 'true';
 
-    abstract function get_name();
+    /**
+     * Return the name of the subplugin - must be over-ridden.
+     *
+     * @return string
+     */
+    abstract public function get_name() : string;
 
-    abstract function is_handler($filepath, $fullclassname);
+    /**
+     * Returns true if the sub plugin is the class' handler.
+     *
+     * @param string $filepath
+     * @param string $fullclassname
+     * @return bool
+     */
+    abstract public function is_handler(string $filepath, string $fullclassname) : bool;
 
-    protected function set_dbreset(bool $reset = true) {
+    /**
+     * Sets the dbreset flag
+     *
+     * @param bool $reset
+     */
+    protected function set_dbreset(bool $reset = true) : void {
         if ($reset) {
             $this->dbreset = 'true';
         } else {
@@ -47,13 +66,23 @@ abstract class phputestgeneratorplugin {
         }
     }
 
-    protected function make_class_varname($classname) {
+    /**
+     * Creates the variable name for the class object.
+     *
+     * @param string $classname
+     */
+    protected function make_class_varname(string $classname) {
         if (!$this->classvarname) {
             $this->classvarname = strtolower(preg_replace('/[\W_]/', '', $classname));
         }
     }
 
-    protected function make_constructorlines($class = null) {
+    /**
+     * Generates the lines that create the class object for each test.
+     *
+     * @param \stdClass $class
+     */
+    protected function make_constructorlines(\stdClass $class = null) : void {
         if ($class && !empty($class->type)) {
             if (!count($this->constructorlines)) {
                 $this->make_class_varname($class->name); // Create a class variable name.
@@ -90,18 +119,41 @@ abstract class phputestgeneratorplugin {
         }
     }
 
-
-    public function generate_prefunction_tests($pluginpath, $relativefile, $class) {
+    /**
+     * Generate test lines before the main test functions.
+     *
+     * @param string $pluginpath
+     * @param string $relativefile
+     * @param \stdClass $class
+     * @return array
+     */
+    public function generate_prefunction_tests(string $pluginpath, string $relativefile, \stdClass $class) {
     }
 
-    public function generate_postfunctions_tests($pluginpath, $relativefile, $class) {
+    /**
+     * Generate lines post (after) the main test lines.
+     *
+     * @param string $pluginpath
+     * @param string $relativefile
+     * @param \stdClass $class
+     * @return array
+     */
+    public function generate_postfunctions_tests(string $pluginpath, string $relativefile, \stdClass $class) {
     }
 
-    public function generate($pluginpath, $relativefile, $class) {
+    /**
+     * Main function - generate the test functions.
+     *
+     * @param string $pluginpath
+     * @param string $relativefile
+     * @param \stdClass $class
+     * @return string
+     */
+    public function generate(string $pluginpath, string $relativefile, \stdClass $class) : string {
         $filelines = array();
 
         // Get the top lines of the test file.
-        $filelines[] =  $this->get_filetop($pluginpath, $relativefile, $class);
+        $filelines[] = $this->get_filetop($pluginpath, $relativefile, $class);
 
         // Constructor stuff -if this is a class.
         if (!empty($class->type)) {
@@ -146,11 +198,22 @@ abstract class phputestgeneratorplugin {
         return implode('', $filelines);
     }
 
-    public function generate_pendinglines($onoroff = true) {
+    /**
+     * Set the flag that detrines if a pending call is added to tests.
+     *
+     * @param bool $onoroff
+     */
+    public function generate_pendinglines(bool $onoroff = true) : void {
         $this->pendinglines = $onoroff;
     }
 
-    public function generate_functiontestlines($function) {
+    /**
+     * Generates each class method/function test function.
+     *
+     * @param \stdClass $function
+     * @return array
+     */
+    public function generate_functiontestlines(\stdClass $function) : array {
         $methodlines = array();
 
         // Name for the variable - use the function name , it will be unique.
@@ -168,7 +231,7 @@ abstract class phputestgeneratorplugin {
 
         // We add in some pending lines to avoid tests being run before the functionality is checked. Can be overridden.
         if ($this->pendinglines) {
-            $methodlines[] =  $this->get_pending_lines();
+            $methodlines[] = $this->get_pending_lines();
         }
 
         $argsnippet = '';
@@ -214,7 +277,12 @@ abstract class phputestgeneratorplugin {
         return $methodlines;
     }
 
-    protected function get_pending_lines() {
+    /**
+     * Gets the pending test line if required.
+     *
+     * @return string
+     */
+    protected function get_pending_lines() : string {
         $testneedscompleting = get_string('testneedscompleting', 'local_phpunit_testgenerator');
         $marktestincomplete = get_string('marktestincomplete', 'local_phpunit_testgenerator');
         return "
@@ -225,15 +293,16 @@ abstract class phputestgeneratorplugin {
     }
 
     /**
-     * Tests if the class extends or implements another class.
+     * Tests if the class is an isnstance of another class.
      *
-     * Borrowed code from the PHP docs - IsExtendsOrImplements() function.
+     * Borrowed and amended code from the PHP docs - IsExtendsOrImplements() function.
      *
-     * @param unknown $search
-     * @param unknown $className
-     * @return boolean
+     * @param string $instancename - ancestor class name.
+     * @param string $filepath - file path
+     * @param string $fullclassname - the full classname bein tested.
+     * @return bool
      */
-    protected function is_instance_of($instancename, $filepath, $fullclassname) {
+    protected function is_instance_of(string $instancename, string $filepath, string $fullclassname) : bool {
         global $CFG;    // Needed by the included files.
 
         // Load the class file if required.
@@ -242,26 +311,39 @@ abstract class phputestgeneratorplugin {
         }
 
         $class = new \ReflectionClass($fullclassname);
-        if(false === $class) {
+        if (false === $class) {
             return false;
         }
 
         do {
             $name = $class->getName();
-            if( $instancename == $name || (trim($instancename, '\\')) == $name) {
+            if ($instancename == $name || (trim($instancename, '\\')) == $name) {
                 return true;
             }
             $class = $class->getParentClass();
-        } while( false !== $class );
+        } while (false !== $class);
 
         return false;
     }
 
-    protected function get_fileend() {
+    /**
+     * Return the last line of the test file.
+     *
+     * @return string
+     */
+    protected function get_fileend() : string {
         return "}\n\n";
     }
 
-    protected function get_filetop($fullpluginpath, $relativefilepath, $class) {
+    /**
+     * Returns the top lines of all the test files inclusing the masthead.
+     *
+     * @param string $fullpluginpath
+     * @param string $relativefilepath
+     * @param \stdClass $class
+     * @return string
+     */
+    protected function get_filetop(string $fullpluginpath, string $relativefilepath, \stdClass $class) : string {
 
         $thisyear = date('Y');
 

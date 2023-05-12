@@ -23,8 +23,9 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
-$plugin->version   = 2023051100;
-$plugin->requires  = 2020061500;    // Requires M3.9.0.
+
+$plugin->version   = 2023051200;
+$plugin->requires  = 2021051700;    // Requires M3.11.
 $plugin->component = 'local_phpunit_testgenerator';
 $plugin->dependencies = array(
     'local_moodlecheck'  => 2021051200

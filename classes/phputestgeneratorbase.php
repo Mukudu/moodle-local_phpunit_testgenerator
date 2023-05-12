@@ -19,7 +19,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/plugins.class.php');
 
 /**
- * Base subplugin
+ * Base sub-plugin
  *
  * @package   phputestgenerator_event
  * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
@@ -27,11 +27,23 @@ require_once(__DIR__ . '/plugins.class.php');
  */
 class phputestgeneratorbase extends \local_phpunit_testgenerator\phputestgeneratorplugin {
 
-    public function is_handler($filepath, $fullclassname) {
+    /**
+     * Reports if it is the handler of the class.
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::is_handler()
+     * @return bool.
+     */
+    public function is_handler(string $filepath, string $fullclassname) : bool {
         return false;
     }
 
-    public function get_name() {
+    /**
+     * Return the sub plugin's name.
+     *
+     * @see \local_phpunit_testgenerator\phputestgeneratorplugin::get_name()
+     * @return string.
+     */
+    public function get_name() : string {
         return 'phputestgeneratorbase';
     }
 

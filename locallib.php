@@ -22,6 +22,13 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/**
+ * Check if the named class is a moodle form
+ *
+ * @param string $filepath - the file path
+ * @param string $fullclassname - the full class name
+ * @return bool
+ */
 function is_moodleform($filepath, $fullclassname) {
     global $CFG;    // Needed by the included files.
     // Load the class file if required.
@@ -38,6 +45,15 @@ function is_moodleform($filepath, $fullclassname) {
     return false;
 }
 
+/**
+ * Checks if the file is a UI facing script
+ *
+ * Determines this based on the script requirirng the config.php.
+ *
+ * @param array $requires - list of file requires
+ * @param string $pluginfilepath - the plugin file path
+ * @return bool
+ */
 function is_ui_facing($requires, $pluginfilepath) {
 
     // Get the file depth to compare relative depth for config.php.
@@ -55,6 +71,11 @@ function is_ui_facing($requires, $pluginfilepath) {
     return false;
 }
 
+/**
+ * Loads all the sub plugins.
+ *
+ * @return array - of the subplugins.
+ */
 function load_subplugins() {
     // Load each of the sub-plugins.
     $allplugins = array();
@@ -70,5 +91,3 @@ function load_subplugins() {
     }
     return $allplugins;
 }
-
-

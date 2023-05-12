@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+defined('MOODLE_INTERNAL') || die();
+
 global $CFG;
 require_once($CFG->dirroot . '/local/moodlecheck/file.php');
 
@@ -57,6 +59,8 @@ class local_phpunit_testgenerator_file extends local_moodlecheck_file {
 
     /**
      * This will fill in all our protected variables in one go.
+     *
+     * It adds additional properties to the ones set by moodlecheck/file.php.
      */
     private function set_protected_vars() {
         if (!$this->varsdefined) {
@@ -108,7 +112,7 @@ class local_phpunit_testgenerator_file extends local_moodlecheck_file {
                             if ($this->is_whitespace_token($i)) {
                                 continue;
                             }
-                            if ($this->tokens[$i][0] == -1) { // ;
+                            if ($this->tokens[$i][0] == -1) {
                                 break;
                             } else {
                                 $this->namespace->name .= $this->tokens[$i][1];
@@ -127,7 +131,7 @@ class local_phpunit_testgenerator_file extends local_moodlecheck_file {
                             if ($this->is_whitespace_token($i)) {
                                 continue;
                             }
-                            if ($this->tokens[$i][0] == -1) { // ;
+                            if ($this->tokens[$i][0] == -1) {
                                 break;
                             } else {
                                 $extends->name .= $this->tokens[$i][1];
@@ -143,21 +147,41 @@ class local_phpunit_testgenerator_file extends local_moodlecheck_file {
         }
     }
 
+    /**
+     * Returns a list of the file's requires.
+     *
+     * @return array - of stdClass objects
+     */
     public function &get_requires() {
         $this->set_protected_vars();
         return $this->requires;
     }
 
+    /**
+     * Returns a list of the file's includes.
+     *
+     * @return array - of stdClass objects
+     */
     public function &get_includes() {
         $this->set_protected_vars();
         return $this->includes;
     }
 
+    /**
+     * Returns a list of classes that are being extended by the classes in the file.
+     *
+     * @return array - of stdClass objects
+     */
     public function &get_extendedclasses() {
         $this->set_protected_vars();
         return $this->extendedclasses;
     }
 
+    /**
+     * Returns the file's namespace.
+     *
+     * @return NULL|stdClass
+     */
     public function &get_namespace() {
         $this->set_protected_vars();
         return $this->namespace;
