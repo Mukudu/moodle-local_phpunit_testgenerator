@@ -18,7 +18,7 @@
  * CLI script.
  *
  * @package   local_phpunit_testgenerator
- * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
+ * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -26,7 +26,6 @@ define('CLI_SCRIPT', true);
 
 require(__DIR__ . '/../../../config.php');
 require_once(__DIR__ . '/../classes/local_phpunit_testgenerator_file.php');
-require_once(__DIR__ . '/../classes/plugins.class.php');
 require_once(__DIR__ . '/../classes/phputestgeneratorbase.php');
 require_once(__DIR__ .'/../locallib.php');
 global $CFG;
@@ -60,7 +59,6 @@ if ($unrecognized) {
 }
 
 // Check the plugin directory.
-$plugin = new \stdClass();
 $fullpluginpath = '';
 if (empty($options['plugin-path'])) {
     echo "\n". get_string('nopluginpath', 'local_phpunit_testgenerator') . "\n";
@@ -110,21 +108,21 @@ if (!file_exists($testpath)) {
 $extensions = load_subplugins();
 
 // Temp - deal with some files only.
-$filenames = array(
+/* $filenames = array(
     '/var/www/html/enrol/invitation/classes/task/cleanup.php',
     '/var/www/html/enrol/invitation/classes/event/invitation_sent.php',
     '/var/www/html/enrol/invitation/locallib.php',
     '/var/www/html/enrol/invitation/edit_form.php',
-);
+); */
 
 // Now let's get all possible testable php files.
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($fullpluginpath));
 $filedets = new RegexIterator($iterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 foreach ($filedets as $files) {
     foreach ($files as $file) {
-        if (!in_array($file, $filenames)) {
-            continue;
-        }
+//         if (!in_array($file, $filenames)) {
+//             continue;
+//         }
 
         // Relative path name
         $relativefile = str_replace($fullpluginpath, '/', $file);
@@ -145,8 +143,9 @@ foreach ($filedets as $files) {
         }
 
         // Update test path.
+        $filetestpath = $testpath;
         if (dirname($relativefile) != '/') {
-            $testpath = $testpath . str_replace('/', '_', trim(dirname($relativefile), '/')) . '_';
+            $filetestpath = $testpath . str_replace('/', '_', trim(dirname($relativefile), '/')) . '_';
         }
 
         // This is why we require local/moodlecheck - parse our file.
@@ -190,51 +189,62 @@ foreach ($filedets as $files) {
             continue;
         }
 
+        // Connect methods with classes - special for non class functions.
+        $noclass = new \stdClass();
+        $noclass->name = 'nonclass';
+        $classes[] = $noclass;
         $classmethods = array();
-        $noclassfunctions = array();
         foreach ($functions as $function) {
             if ($function->class) {
                 $classmethods[$function->class->name][] = $function;
             } else {
-                $noclassfunctions[] = $function;
+                $classmethods[$noclass->name][] = $function;
             }
         }
 
         if (count($classes)) {
             foreach ($classes as &$class) {     // Each valid class gets its own test file.
                 $filelines = array();
+
                 // Has the class got any functions?
                 if (empty($classmethods[$class->name])) {
                     continue;
                 }
 
-                // Class test file name.
-                $testfilename = $testpath . $class->name . '_test.php';
+                $handler = new phputestgeneratorbase();        // Default handler.
+                if (empty($class->type)) {  // Not a real class.
+                    // Default test file name.
+                    $testfilename = $filetestpath . basename($file, '.php') . '_test.php';
+                } else {
 
+                    // Namespaced class name.
+                    if ($class->namespace = $parsefile->get_namespace()) {
+                        $class->fullname = '\\' . $class->namespace->name . '\\' . $class->name;
+                    } else {
+                        $class->fullname = '\\' . $class->name;
+                    }
+
+                    // Find a sub-plugin handler if there is one.
+                    foreach ($extensions as $extension) {
+                        if ($extension->is_handler($file, $class->fullname)) {
+                            $handler = $extension;
+                            break;
+                        }
+                    }
+
+                    // Check if we are dealing with a moodle_form - no tests for that.
+                    if (is_moodleform($file, $class->fullname)) {
+                        continue;
+                    }
+
+                    // Class test file name.
+                    $testfilename = $filetestpath . $class->name . '_test.php';
+                }
+
+                // Check for existing test file.
                 if (!$options['purge'] && file_exists($testfilename)) {
                     echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
                     continue;
-                }
-
-                // Namespaced class name.
-                if ($class->namespace = $parsefile->get_namespace()) {
-                    $class->fullname = '\\' . $class->namespace->name . '\\' . $class->name;
-                } else {
-                    $class->fullname = '\\' . $class->name;
-                }
-
-                // Check if we are dealing with a moodle_form - no tests for that.
-                if (is_moodleform($file, $class->fullname)) {
-                    continue;
-                }
-
-                // Find a sub-plugin handler if there is one.
-                $handler = new phputestgeneratorbase();        // default handler;
-                foreach ($extensions as $extension) {
-                    if ($extension->is_handler($file, $class->fullname)) {
-                        $handler = $extension;
-                        break;
-                    }
                 }
 
                 // Store the relevant methods with the class.
@@ -245,28 +255,7 @@ foreach ($filedets as $files) {
                 if (file_put_contents($testfilename, $filelines) === false) {
                     echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
                 }
-            }
-        }
 
-        // Non-class functions.
-        if (count($noclassfunctions)) {
-
-            $filelines = array();
-            // Default test file name.
-            $testfilename = $testpath . basename($file, '.php') . '_test.php';
-
-            if (!$options['purge'] && file_exists($testfilename)) {
-                echo get_string('testfilenopurge', 'local_phpunit_testgenerator', $relativefile) . "\n";
-                continue;
-            }
-
-            $handler = new phputestgeneratorbase();        // default handler;
-            $noclass = new \stdClass();
-            $noclass->functions = $noclassfunctions;
-            $filelines[] = $handler->generate($options['plugin-path'], $relativefile, $noclass);
-
-            if (file_put_contents($testfilename, $filelines) === false) {
-                echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";
             }
         }
     }

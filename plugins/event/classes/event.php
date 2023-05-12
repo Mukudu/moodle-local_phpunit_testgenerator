@@ -18,11 +18,13 @@ namespace phputestgenerator_event;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/../../../classes/plugins.class.php');
+
 /**
  * Events subplugin
  *
  * @package   phputestgenerator_event
- * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
+ * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class event extends \local_phpunit_testgenerator\phputestgeneratorplugin {

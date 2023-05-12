@@ -22,7 +22,7 @@ defined('MOODLE_INTERNAL') || die();
  * Subplugin base class
  *
  * @package   local_phpunit_testgenerator
- * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
+ * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 abstract class phputestgeneratorplugin {
@@ -54,7 +54,7 @@ abstract class phputestgeneratorplugin {
     }
 
     protected function make_constructorlines($class = null) {
-        if ($class) {
+        if ($class && !empty($class->type)) {
             if (!count($this->constructorlines)) {
                 $this->make_class_varname($class->name); // Create a class variable name.
                 // Let's create the class constructor.
@@ -104,7 +104,7 @@ abstract class phputestgeneratorplugin {
         $filelines[] =  $this->get_filetop($pluginpath, $relativefile, $class);
 
         // Constructor stuff -if this is a class.
-        if (!empty($class->name)) {
+        if (!empty($class->type)) {
             $this->make_constructorlines($class);
         }
 
@@ -115,7 +115,7 @@ abstract class phputestgeneratorplugin {
 
         foreach ($class->functions as $function) {
 
-            if (!empty($class->name)) {
+            if (!empty($class->type)) {
                 // Ignore private and protected functions.
                 if (!$function->accessmodifiers || !(in_array(T_PUBLIC, $function->accessmodifiers))) {
                     continue;
@@ -270,7 +270,7 @@ abstract class phputestgeneratorplugin {
         // Namespace for plugin.
         $testnamespace = substr_replace($fullpluginpath, '_', strpos($fullpluginpath, '/'), 1);
 
-        if (empty($class->name)) {
+        if (empty($class->type)) {
             // We use the filename for the classname.
             $testclassname = basename($relativefilepath, '.php');
         } else {

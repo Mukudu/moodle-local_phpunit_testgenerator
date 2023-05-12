@@ -14,15 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-// namespace local_phpunit_testgenerator;
-
 defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/plugins.class.php');
 
 /**
  * Base subplugin
  *
  * @package   phputestgenerator_event
- * @copyright 2019 - 2021 Mukudu Ltd - Bham UK
+ * @copyright 2022 - 2023 Mukudu Ltd - Bham UK
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class phputestgeneratorbase extends \local_phpunit_testgenerator\phputestgeneratorplugin {
