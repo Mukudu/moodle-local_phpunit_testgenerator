@@ -18,6 +18,7 @@ _php local/phpunit_testgenerator/cli/generateskeletons.php [--plugin-path=path/t
 
 ## TODOs ##
 
+- Include coverage functionality - note M4.0 defaults - https://docs.moodle.org/dev/Writing_PHPUnit_tests#Check_your_coverage
 - Use getMockForTrait() for traits -  (how to test)
 
 # See Also #
