@@ -116,16 +116,15 @@ foreach ($filedets as $files) {
         // Relative path name.
         $relativefile = str_replace($fullpluginpath, '/', $file);
 
-        // Is it in excluded directory?
-        $relativedir = dirname($relativefile);
-        if (!in_array($relativedir, $excludedirs)) {
-            while (dirname($relativedir) != '/') {
-                $relativedir = dirname($relativedir);
+        // Is it in excluded directory?  Updated to ensure sub-directories are excluded too.
+        //$relativedir = dirname($relativefile);
+        $relativedir = $relativefile;
+        while (dirname($relativedir) != '/') {
+            $relativedir = dirname($relativedir);
+            if (in_array($relativedir, $excludedirs)) {
+                continue(2);
             }
-        } else {
-            continue;
         }
-
         // Is it in the excluded files list?
         if (in_array($relativefile, $excludefiles)) {
             continue;

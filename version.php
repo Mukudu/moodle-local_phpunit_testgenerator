@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2024011000;
+$plugin->version   = 2024011001;
 $plugin->requires  = 2021051700;    // Requires M3.11.
 $plugin->component = 'local_phpunit_testgenerator';
 $plugin->dependencies = array(
