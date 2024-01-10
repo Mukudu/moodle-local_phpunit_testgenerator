@@ -239,7 +239,7 @@ foreach ($filedets as $files) {
                 // Store the relevant methods with the class.
                 $class->functions = $classmethods[$class->name];
 
-                $filelines[] = $handler->generate($options['plugin-path'], $relativefile, $class);
+                $filelines[] = $handler->generate($options['plugin-path'], $relativefile, $class, $testfilename);
 
                 if (file_put_contents($testfilename, $filelines) === false) {
                     echo get_string('failedtosave', 'local_phpunit_testgenerator', $relativefile) . "\n";

@@ -149,11 +149,11 @@ abstract class phputestgeneratorplugin {
      * @param \stdClass $class
      * @return string
      */
-    public function generate(string $pluginpath, string $relativefile, \stdClass $class) : string {
+    public function generate(string $pluginpath, string $relativefile, \stdClass $class, string $testfilename) : string {
         $filelines = array();
 
         // Get the top lines of the test file.
-        $filelines[] = $this->get_filetop($pluginpath, $relativefile, $class);
+        $filelines[] = $this->get_filetop($pluginpath, $relativefile, $class, $testfilename);
 
         // Constructor stuff -if this is a class.
         if (!empty($class->type)) {
@@ -343,7 +343,10 @@ abstract class phputestgeneratorplugin {
      * @param \stdClass $class
      * @return string
      */
-    protected function get_filetop(string $fullpluginpath, string $relativefilepath, \stdClass $class) : string {
+    protected function get_filetop(string $fullpluginpath, string $relativefilepath, \stdClass $class,
+            string $testfilename) : string {
+
+        global $CFG;
 
         $thisyear = date('Y');
 
@@ -354,11 +357,15 @@ abstract class phputestgeneratorplugin {
 
         if (empty($class->type)) {
             // We use the filename for the classname.
-            $testclassname = basename($relativefilepath, '.php');
+            $testclassname = basename($relativefilepath, '.php') . '_test';
         } else {
-            $testclassname = $class->name;
+            // See https://docs.moodle.org/dev/PHPUnit_integration#Class_and_file_naming_rules
+            if ($CFG->version < 2020110900) { // Pre Moodle 3.10.
+                $testclassname = $class->name  . '_test';
+            } else {
+                $testclassname = basename($testfilename, '.php');
+            }
         }
-        $testclassname .= '_test';
 
         return
         "<?php
